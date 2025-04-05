@@ -15,3 +15,10 @@ def pyaudio_test():
         "status": "SUCCESS - PyAudio working!",
         "device_count": p.get_device_count()
     }
+
+# Temporarily add to main.py
+try:
+    from scene_runner import get_user_character_and_script  # Replace with a real function
+    print("scene_runner imports successfully!")
+except Exception as e:
+    print(f"scene_runner import FAILED: {str(e)}")
