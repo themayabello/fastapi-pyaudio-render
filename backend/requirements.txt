@@ -5,3 +5,4 @@ PyMuPDF
 webrtcvad
 requests
 python-dotenv
+python-multipart
