@@ -54,6 +54,7 @@ def structure_script(script_lines, user_character):
 
 
 def get_user_character_and_script():
+    print("you're doing it girly")
     path = input("📄 Enter path to your PDF script: ")
     lines = parse_script_from_pdf(path)
     characters = extract_characters(lines)

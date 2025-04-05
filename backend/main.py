@@ -19,6 +19,7 @@ def pyaudio_test():
         "device_count": p.get_device_count()
     }
 
+
 @app.get("/test-scene-runner")
 def test_scene_runner():
     try:
