@@ -26,7 +26,7 @@ def health_check():
 # Fix 2: Complete CORS middleware (missing quotes)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://www.mbcreativeenterprises.com"],
+    allow_origins=["https://www.mbcreativeenterprises.com", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],  # Fixed quotes
     allow_headers=["*"],  # Fixed quotes
