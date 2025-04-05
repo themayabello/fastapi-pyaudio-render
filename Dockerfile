@@ -9,8 +9,11 @@ RUN apt-get update && \
         g++ \
     && rm -rf /var/lib/apt/lists/*
 
+# Set working directory to /app, /app created by Docker
 WORKDIR /app
-COPY . .
+# Copy everything from the backend folder into /app
+# Another service takes care of the frontend, don't want to unnecesarily copy it over
+COPY backend/ .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
