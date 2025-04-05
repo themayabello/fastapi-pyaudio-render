@@ -15,6 +15,7 @@ load_dotenv()
 api_key = os.getenv("ELEVENLABS_API_KEY")
 ELEVENLABS_VOICE_ID = "cjVigY5qzO86Huf0OWal"
 
+
 # -------- PDF + Script Parsing --------
 def parse_script_from_pdf(path):
     doc = fitz.open(path)
@@ -28,6 +29,7 @@ def parse_script_from_pdf(path):
                 all_lines.append(line)
     return all_lines
 
+
 def extract_characters(script_lines):
     potential_chars = []
     print("\n🧾 Lines pulled from PDF:")
@@ -39,6 +41,7 @@ def extract_characters(script_lines):
     most_common = Counter(potential_chars).most_common()
     return [char for char, count in most_common]
 
+
 def structure_script(script_lines, user_character):
     structured = []
     current_char = None
@@ -48,6 +51,7 @@ def structure_script(script_lines, user_character):
         elif current_char:
             structured.append({"character": current_char, "line": line})
     return structured
+
 
 def get_user_character_and_script():
     path = input("📄 Enter path to your PDF script: ")
@@ -66,6 +70,7 @@ def get_user_character_and_script():
     user_character = characters[idx]
     full_script = structure_script(lines, user_character)
     return full_script, user_character
+
 
 # -------- ElevenLabs Voice --------
 def speak(text, voice_id=ELEVENLABS_VOICE_ID, api_key=api_key):
@@ -97,6 +102,7 @@ def speak(text, voice_id=ELEVENLABS_VOICE_ID, api_key=api_key):
     else:
         print("❌ Failed to get audio from ElevenLabs:", response.text)
 
+
 # -------- Dynamic Silence Tracker --------
 class SilenceTracker:
     def __init__(self):
@@ -110,6 +116,7 @@ class SilenceTracker:
 
     def add_pause(self, duration):
         self.recent_silences.append(duration)
+
 
 # -------- Voice Activity Detection --------
 class AudioFrameReader:
@@ -160,6 +167,7 @@ class AudioFrameReader:
                     print(f"⏹️ You paused for: {pause_duration:.2f}s")
                 return
 
+
 # -------- Scene Runner --------
 def run_scene():
     script, user_character = get_user_character_and_script()
@@ -175,6 +183,7 @@ def run_scene():
             audio_reader.listen_until_silence()
 
     print("\n🎭 Scene complete!")
+
 
 # -------- Main --------
 if __name__ == "__main__":

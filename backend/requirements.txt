@@ -1,3 +1,7 @@
 fastapi
 uvicorn
 pyaudio
+PyMuPDF
+webrtcvad
+requests
+python-dotenv
