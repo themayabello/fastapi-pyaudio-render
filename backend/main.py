@@ -81,47 +81,52 @@ async def upload_script(file: UploadFile = File(...)):
 
 @app.post("/start_scene")
 async def start_scene(file: UploadFile = File(...), character: str = Form(...)):
-    print("Received start_scene request")
-    print(f"Character: {character}")
-    contents = await file.read()
-    temp_path = "uploaded_script.pdf"  # TODO change temp path
-    with open(temp_path, "wb") as f:
-        f.write(contents)
+    try:
+        print("Received start_scene request")
+        print(f"Character: {character}")
+        contents = await file.read()
+        temp_path = "uploaded_script.pdf"  # TODO change temp path
+        with open(temp_path, "wb") as f:
+            f.write(contents)
 
-    lines = parse_script_from_pdf(temp_path)
-    print(lines)
-    print(f"Lines parsed: {len(lines)}")
+        lines = parse_script_from_pdf(temp_path)
+        print(lines)
+        print(f"Lines parsed: {len(lines)}")
 
-    # Find the first speaking character
-    structured_all = []
-    current_char = None
-    for line in lines:
-        if line.isupper():
-            current_char = line
-        elif current_char:
-            if line.strip().startswith("(") and line.strip().endswith(")"):
-                continue
-            structured_all.append({"character": current_char, "line": line})
+        # Find the first speaking character
+        structured_all = []
+        current_char = None
+        for line in lines:
+            if line.isupper():
+                current_char = line
+            elif current_char:
+                if line.strip().startswith("(") and line.strip().endswith(")"):
+                    continue
+                structured_all.append({"character": current_char, "line": line})
 
-    user_is_first = structured_all and structured_all[0]["character"] == character.upper()
-    print(user_is_first)
+        user_is_first = structured_all and structured_all[0]["character"] == character.upper()
+        print(user_is_first)
 
-    # Extract scene partner lines only
-    structured = [entry for entry in structured_all if entry["character"] != character.upper()]
+        # Extract scene partner lines only
+        structured = [entry for entry in structured_all if entry["character"] != character.upper()]
 
-    # 🎭 Run scene using dynamic timeout + ElevenLabs
-    silence_tracker = SilenceTracker()
-    audio_reader = AudioFrameReader(silence_tracker)
+        # 🎭 Run scene using dynamic timeout + ElevenLabs
+        silence_tracker = SilenceTracker()
+        audio_reader = AudioFrameReader(silence_tracker)
 
-    # Wait for user to speak if they're first
-    if user_is_first:
-        print(f"🗣️ Waiting for {character} to say their first line...")
-        audio_reader.listen_until_silence()
+        # Wait for user to speak if they're first
+        if user_is_first:
+            print(f"🗣️ Waiting for {character} to say their first line...")
+            audio_reader.listen_until_silence()
 
-    for entry in structured:
-        speak(entry['line'])
-        audio_reader.listen_until_silence()
+        for entry in structured:
+            speak(entry['line'])
+            audio_reader.listen_until_silence()
 
-    return {"message": f"Scene with {character} complete!"}
+        return {"message": f"Scene with {character} complete!"}
+    except Exception as e:
+        import traceback
+        print("🔥 Error in /start_scene:\n", traceback.format_exc())
+        return {"error": str(e)}
 
 
