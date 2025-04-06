@@ -6,6 +6,14 @@ import os
 
 app = FastAPI()
 
+# CORS middleware - must be under "app=FastAPI()"
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://www.mbcreativeenterprises.com", "https://mbcreativeenterprises.com", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Fix 1: Combine root and health check
 @app.get("/")
@@ -29,15 +37,6 @@ async def print_routes():
     for route in app.routes:
         print(f"- {route.path} ({route.methods})")
 
-
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://www.mbcreativeenterprises.com", "https://mbcreativeenterprises.com", "http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 SCRIPT_CACHE = {}
 
@@ -68,24 +67,30 @@ def run_scene(script, user_character):
 # ---- API Endpoints ----
 @app.post("/upload")
 async def upload_script(file: UploadFile = File(...)):
+    print("in upload script")
     contents = await file.read()
     temp_path = "uploaded_script.pdf" # TODO change temp path
     with open(temp_path, "wb") as f:
         f.write(contents)
 
     lines = parse_script_from_pdf(temp_path)
+    print(lines)
     characters = extract_characters(lines)
     return characters
 
 
 @app.post("/start_scene")
 async def start_scene(file: UploadFile = File(...), character: str = Form(...)):
+    print("Received start_scene request")
+    print(f"Character: {character}")
     contents = await file.read()
     temp_path = "uploaded_script.pdf"  # TODO change temp path
     with open(temp_path, "wb") as f:
         f.write(contents)
 
     lines = parse_script_from_pdf(temp_path)
+    print(lines)
+    print(f"Lines parsed: {len(lines)}")
 
     # Find the first speaking character
     structured_all = []

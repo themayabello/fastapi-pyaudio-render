@@ -27,6 +27,9 @@ def parse_script_from_pdf(path):
             line = line.strip()
             if line:
                 all_lines.append(line)
+    print("parse_script_from_pdf")
+    print(all_lines)
+    print(api_key)
     return all_lines
 
 
