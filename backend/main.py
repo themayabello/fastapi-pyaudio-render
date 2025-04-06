@@ -30,13 +30,13 @@ async def print_routes():
         print(f"- {route.path} ({route.methods})")
 
 
-# Fix 2: Complete CORS middleware (missing quotes)
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://www.mbcreativeenterprises.com", "http://localhost:3000"],
+    allow_origins=["https://www.mbcreativeenterprises.com", "https://mbcreativeenterprises.com", "http://localhost:3000"],
     allow_credentials=True,
-    allow_methods=["*"],  # Fixed quotes
-    allow_headers=["*"],  # Fixed quotes
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 SCRIPT_CACHE = {}
