@@ -23,6 +23,13 @@ def health_check():
     return {"status": "ok"}
 
 
+@app.on_event("startup")
+async def print_routes():
+    print("Registered routes:")
+    for route in app.routes:
+        print(f"- {route.path} ({route.methods})")
+
+
 # Fix 2: Complete CORS middleware (missing quotes)
 app.add_middleware(
     CORSMiddleware,
