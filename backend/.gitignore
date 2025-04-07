@@ -2,3 +2,7 @@
 __pycache__/
 venv/
 .env
+
+# Keep static folder, ignore contents
+backend/static/*
+!backend/static/.keep

@@ -26,8 +26,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static files and templates - only needed when serving frontend with fastAPI
-# app.mount("/static", StaticFiles(directory="static"), name="static")
+# Static files - must be under "app=FastAPI()"
+app.mount("/static", StaticFiles(directory="static"), name="static")
 # templates = Jinja2Templates(directory="templates")
 
 # Global script storage (in production use a database)
@@ -37,6 +37,7 @@ SCRIPT_STORAGE = {}
 # --- Core Functions ---
 def generate_audio(text, output_path):
     """Generate audio using ElevenLabs"""
+    print(f"🎤 Generating audio: {output_path}")
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}"
     headers = {
         "xi-api-key": ELEVENLABS_API_KEY,
