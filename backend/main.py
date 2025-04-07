@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, Form, Request
+from fastapi.routing import APIRoute
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -83,7 +84,10 @@ def health_check():
 async def print_routes():
     print("Registered routes:")
     for route in app.routes:
-        print(f"- {route.path} ({route.methods})")
+        if isinstance(route, APIRoute):
+            print(f"- {route.path} ({route.methods})")
+        else:
+            print(f"- {route.path} (non-API route)")
 
 
 @app.post("/upload_script")
