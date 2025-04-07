@@ -129,7 +129,7 @@
             formData.append('file', file);
 
             try {
-                const response = await fetch('/upload_script', {
+                const response = await fetch('https://fastapi-pyaudio-render.onrender.com/upload_script', {
                     method: 'POST',
                     body: formData
                 });
@@ -165,7 +165,7 @@
             formData.append('character', character);
 
             try {
-                const response = await fetch('/start_scene', {
+                const response = await fetch('https://fastapi-pyaudio-render.onrender.com/start_scene', {
                     method: 'POST',
                     body: formData
                 });
@@ -266,7 +266,7 @@
             formData.append('character', character);
 
             try {
-                const response = await fetch('/get_next_line', {
+                const response = await fetch('https://fastapi-pyaudio-render.onrender.com/get_next_line', {
                     method: 'POST',
                     body: formData
                 });
