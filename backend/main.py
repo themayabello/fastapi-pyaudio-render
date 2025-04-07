@@ -1,8 +1,19 @@
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
-from scene_runner import speak, SilenceTracker, AudioFrameReader
-from utils import parse_script_from_pdf, extract_characters
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 import os
+from dotenv import load_dotenv
+import tempfile
+import requests
+import json
+
+from scene_runner import parse_script_from_pdf, extract_characters
+
+# Load environment variables
+load_dotenv()
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "cjVigY5qzO86Huf0OWal")
 
 app = FastAPI()
 
@@ -15,7 +26,42 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Fix 1: Combine root and health check
+# Static files and templates - only needed when serving frontend with fastAPI
+# app.mount("/static", StaticFiles(directory="static"), name="static")
+# templates = Jinja2Templates(directory="templates")
+
+# Global script storage (in production use a database)
+SCRIPT_STORAGE = {}
+
+
+# --- Core Functions ---
+def generate_audio(text, output_path):
+    """Generate audio using ElevenLabs"""
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}"
+    headers = {
+        "xi-api-key": ELEVENLABS_API_KEY,
+        "Content-Type": "application/json"
+    }
+    data = {
+        "text": text,
+        "voice_settings": {
+            "stability": 0.5,
+            "similarity_boost": 0.8
+        }
+    }
+    response = requests.post(url, headers=headers, json=data)
+    if response.status_code == 200:
+        with open(output_path, "wb") as f:
+            f.write(response.content)
+    else:
+        raise Exception(f"ElevenLabs error: {response.text}")
+
+
+# @app.get("/")
+# async def home(request: Request):
+#     return templates.TemplateResponse("index.html", {"request": request})
+
+# --- API Endpoints ---
 @app.get("/")
 async def root():
     return {
@@ -31,6 +77,7 @@ def health_check():
     return {"status": "ok"}
 
 
+# for debugging -  logs all your registered routes
 @app.on_event("startup")
 async def print_routes():
     print("Registered routes:")
@@ -38,95 +85,97 @@ async def print_routes():
         print(f"- {route.path} ({route.methods})")
 
 
-SCRIPT_CACHE = {}
-
-
-def structure_script(script_lines, user_character):
-    structured = []
-    current_char = None
-    for line in script_lines:
-        if line.isupper():
-            current_char = line
-        elif current_char:
-            # skip parentheticals or directions
-            if line.strip().startswith("(") and line.strip().endswith(")"):
-                continue
-            structured.append({"character": current_char, "line": line})
-
-    # return only the scene partner's lines
-    return [entry for entry in structured if entry["character"] == user_character.upper()]
-
-
-def run_scene(script, user_character):
-    print(f"\n🎬 Starting scene — YOU are: {user_character}")
-    for entry in script:
-        print(f"🎭 {entry['character']}: {entry['line']}")
-        speak(entry['line'])  # <-- this triggers the audio!
-
-
-# ---- API Endpoints ----
-@app.post("/upload")
+@app.post("/upload_script")
 async def upload_script(file: UploadFile = File(...)):
-    print("in upload script")
+    """Process uploaded script PDF"""
     contents = await file.read()
-    temp_path = "uploaded_script.pdf" # TODO change temp path
+    temp_path = "temp_script.pdf"
     with open(temp_path, "wb") as f:
         f.write(contents)
 
     lines = parse_script_from_pdf(temp_path)
-    print(lines)
     characters = extract_characters(lines)
-    return characters
+    script_id = os.urandom(8).hex()
+
+    SCRIPT_STORAGE[script_id] = {
+        "characters": characters,
+        "lines": lines
+    }
+    return {"script_id": script_id, "characters": characters}
 
 
 @app.post("/start_scene")
-async def start_scene(file: UploadFile = File(...), character: str = Form(...)):
-    try:
-        print("Received start_scene request")
-        print(f"Character: {character}")
-        contents = await file.read()
-        temp_path = "uploaded_script.pdf"  # TODO change temp path
-        with open(temp_path, "wb") as f:
-            f.write(contents)
+async def start_scene(script_id: str = Form(...),
+                      character: str = Form(...)):
+    """Initialize a scene with selected character"""
+    if script_id not in SCRIPT_STORAGE:
+        return {"error": "Script not found"}
 
-        lines = parse_script_from_pdf(temp_path)
-        print(lines)
-        print(f"Lines parsed: {len(lines)}")
-
-        # Find the first speaking character
-        structured_all = []
-        current_char = None
-        for line in lines:
-            if line.isupper():
-                current_char = line
-            elif current_char:
-                if line.strip().startswith("(") and line.strip().endswith(")"):
-                    continue
-                structured_all.append({"character": current_char, "line": line})
-
-        user_is_first = structured_all and structured_all[0]["character"] == character.upper()
-        print(user_is_first)
-
-        # Extract scene partner lines only
-        structured = [entry for entry in structured_all if entry["character"] != character.upper()]
-
-        # 🎭 Run scene using dynamic timeout + ElevenLabs
-        silence_tracker = SilenceTracker()
-        audio_reader = AudioFrameReader(silence_tracker)
-
-        # Wait for user to speak if they're first
-        if user_is_first:
-            print(f"🗣️ Waiting for {character} to say their first line...")
-            audio_reader.listen_until_silence()
-
-        for entry in structured:
-            speak(entry['line'])
-            audio_reader.listen_until_silence()
-
-        return {"message": f"Scene with {character} complete!"}
-    except Exception as e:
-        import traceback
-        print("🔥 Error in /start_scene:\n", traceback.format_exc())
-        return {"error": str(e)}
+    return {
+        "message": f"Scene started as {character}",
+        "script_id": script_id,
+        "current_position": 0
+    }
 
 
+@app.post("/get_next_line")
+async def get_next_line(script_id: str = Form(...),
+                        current_position: int = Form(0),
+                        character: str = Form(...)):
+    """Get the next line in the scene"""
+    if script_id not in SCRIPT_STORAGE:
+        return {"error": "Script not found"}
+
+    script = SCRIPT_STORAGE[script_id]
+    if current_position >= len(script["lines"]):
+        return {"action": "scene_complete"}
+
+    line = script["lines"][current_position]
+
+    # Skip scene directions and empty lines
+    if (not line.strip() or
+            line.startswith(('INT.', 'EXT.', 'FADE', 'CUT TO', 'DISSOLVE')) or
+            (line.startswith('(') and line.endswith(')'))):
+        return {
+            "action": "continue",
+            "next_position": current_position + 1
+        }
+
+    # Character name detection (all caps, not a scene direction)
+    if line.isupper() and 1 <= len(line.split()) <= 3:
+        current_char = line
+        next_position = current_position + 1
+        # Get the dialogue text (skip parenthetical if present)
+        while (next_position < len(script["lines"]) and
+               (not script["lines"][next_position].strip() or
+                (script["lines"][next_position].startswith('(') and
+                 script["lines"][next_position].endswith(')')))):
+            next_position += 1
+
+        if next_position >= len(script["lines"]):
+            return {"action": "scene_complete"}
+
+        line_text = script["lines"][next_position]
+
+        if current_char == character.upper():
+            return {
+                "action": "user_turn",
+                "prompt": line_text,
+                "next_position": next_position + 1
+            }
+        else:
+            # Generate AI response
+            output_path = f"static/response_{script_id}_{current_position}.mp3"
+            generate_audio(line_text, output_path)
+
+            return {
+                "action": "play_audio",
+                "audio_url": f"/static/response_{script_id}_{current_position}.mp3",
+                "next_text": f"{current_char}: {line_text}",
+                "next_position": next_position + 1
+            }
+
+    return {
+        "action": "continue",
+        "next_position": current_position + 1
+    }
