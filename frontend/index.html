@@ -129,7 +129,7 @@
             formData.append('file', file);
 
             try {
-                const response = await fetch('https://fastapi-pyaudio-render.onrender.com/upload_script', {
+                const response = await fetch('http://localhost:10000/upload_script', {
                     method: 'POST',
                     body: formData
                 });
@@ -165,7 +165,7 @@
             formData.append('character', character);
 
             try {
-                const response = await fetch('https://fastapi-pyaudio-render.onrender.com/start_scene', {
+                const response = await fetch('http://localhost:10000/start_scene', {
                     method: 'POST',
                     body: formData
                 });
@@ -266,25 +266,31 @@
             formData.append('character', character);
 
             try {
-                const response = await fetch('https://fastapi-pyaudio-render.onrender.com/get_next_line', {
+                const response = await fetch('http://localhost:10000/get_next_line', {
                     method: 'POST',
                     body: formData
                 });
 
                 const data = await response.json();
+                console.log("📡 /get_next_line response:", data);
+
                 if (data.error) {
                     throw new Error(data.error);
                 }
 
                 if (data.action === 'scene_complete') {
+                    console.log("in scene complete")
                     updateTranscript(transcriptBox.innerHTML + "\n\n🎉 Scene complete!");
                     listenButton.style.display = 'none';
                     return;
                 }
 
                 if (data.action === 'play_audio') {
+                    console.log("in the if")
                     updateTranscript(transcriptBox.innerHTML + `\n\n<span class="ai-line">${data.next_text}</span>`);
-                    const audio = new Audio(data.audio_url);
+                    const audio = new Audio(`http://localhost:10000${data.audio_url}`);
+                    console.log("audio")
+                    console.log(audio)
                     audio.play();
                     currentPosition = data.next_position;
 
@@ -293,6 +299,7 @@
                         listenButton.style.display = 'inline-block';
                     };
                 } else if (data.action === 'user_turn') {
+                    console.log("in the else if")
                     updateTranscript(transcriptBox.innerHTML + `\n\n<span class="user-line">YOUR LINE: ${data.prompt}</span>\n\nClick 'Start Speaking' when ready`);
                     currentPosition = data.next_position;
                     listenButton.style.display = 'inline-block';
@@ -305,6 +312,7 @@
 
         // Helper function to update transcript
         function updateTranscript(text) {
+            console.log("📝 Transcript update:", text);
             transcriptBox.innerHTML = text;
             transcriptBox.scrollTop = transcriptBox.scrollHeight;
         }

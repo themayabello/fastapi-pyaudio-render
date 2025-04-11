@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import tempfile
 import requests
 import json
+from mimetypes import add_type
 
 from scene_runner import parse_script_from_pdf, extract_characters
 
@@ -21,7 +22,8 @@ app = FastAPI()
 # CORS middleware - must be under "app=FastAPI()"
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://www.mbcreativeenterprises.com", "https://mbcreativeenterprises.com", "http://localhost:3000"],
+    allow_origins=["https://www.mbcreativeenterprises.com", "https://mbcreativeenterprises.com",
+                   "http://localhost:3000", "http://localhost:10000", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,6 +31,7 @@ app.add_middleware(
 
 # Static files - must be under "app=FastAPI()"
 app.mount("/static", StaticFiles(directory="static"), name="static")
+add_type("audio/mpeg", ".mp3")
 # templates = Jinja2Templates(directory="templates")
 
 # Global script storage (in production use a database)
@@ -131,11 +134,16 @@ async def get_next_line(script_id: str = Form(...),
     if script_id not in SCRIPT_STORAGE:
         return {"error": "Script not found"}
 
+    print(script_id)
+    print(current_position)
+    print(character)
     script = SCRIPT_STORAGE[script_id]
+    print(script)
     if current_position >= len(script["lines"]):
         return {"action": "scene_complete"}
 
     line = script["lines"][current_position]
+    print(line)
 
     # Skip scene directions and empty lines
     if (not line.strip() or
@@ -171,6 +179,7 @@ async def get_next_line(script_id: str = Form(...),
         else:
             # Generate AI response
             output_path = f"static/response_{script_id}_{current_position}.mp3"
+            print(output_path)
             generate_audio(line_text, output_path)
 
             return {
